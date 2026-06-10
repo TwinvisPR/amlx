@@ -55,9 +55,15 @@ If you moved your media folder, pass `--library` with the path to your `.musicli
 
 ## Verify nothing was dropped
 
-When it finishes, it prints the extracted track count. Compare it to the **Songs** total shown in
-the Apple Music app. They should match (the Songs view can be slightly lower because it excludes
-music videos, which the database still stores as tracks).
+Two checks confirm completeness:
+
+1. **Automatic** — the tool reads the track/playlist counts the library *declares about itself* in
+   its header and cross-checks them against what was extracted. You'll see `OK` (or a `WARNING` if
+   they ever disagree). Verified to match across Apple Music for Windows and macOS Monterey/Sequoia
+   library versions.
+2. **Manual** — compare the printed track count to the **Songs** total in the Apple Music app. They
+   should match (the Songs view can be slightly lower because it excludes music videos, which the
+   database still stores as tracks).
 
 ## How it works
 

@@ -68,13 +68,18 @@ def resolve_library(arg):
     return found[0][1], found[0][2]
 
 
-def header_version(raw):
+def header_info(raw):
+    """Read the clear-text hfma header: version, envelope, and the library's own
+    declared track/playlist counts (used for an integrity cross-check)."""
+    info = {"version": "?", "envelope": 0, "declared_tracks": None, "declared_playlists": None}
     try:
-        env = int.from_bytes(raw[4:8], "little")
-        vs = raw[16:48].split(b"\x00", 1)[0].decode("utf-8", "ignore")
-        return vs, env
+        info["envelope"] = int.from_bytes(raw[4:8], "little")
+        info["version"] = raw[16:48].split(b"\x00", 1)[0].decode("utf-8", "ignore")
+        info["declared_tracks"] = int.from_bytes(raw[68:72], "little")
+        info["declared_playlists"] = int.from_bytes(raw[72:76], "little")
     except Exception:
-        return "?", 0
+        pass
+    return info
 
 
 def main():
@@ -99,8 +104,8 @@ def main():
         db_copy = os.path.join(tmp, "Library.musicdb")
         shutil.copy2(db_path, db_copy)
         raw = open(db_copy, "rb").read()
-        vs, env = header_version(raw)
-        print(f"Version : {vs}  (envelope {env} bytes, {len(raw):,} bytes)")
+        hi = header_info(raw)
+        print(f"Version : {hi['version']}  (envelope {hi['envelope']} bytes, {len(raw):,} bytes)")
 
         print("Decrypting + parsing...")
         library = musicdb.parse(musicdb.decrypt_and_inflate(raw))
@@ -135,8 +140,21 @@ def main():
     print(f"  star-rated tracks   : {summary['rated']:,}")
     if summary["missing_core"]:
         print(f"  rows missing core metadata: {summary['missing_core']}")
-    print("\nVerify: compare the track count above against the Songs view in the")
-    print("Apple Music app (Songs view may exclude music videos, so it can be slightly lower).")
+
+    # Integrity cross-check: the library declares its own counts in the header.
+    print("\nIntegrity check (extracted vs. the count the library declares):")
+    for label, got, declared in (
+        ("tracks", summary["tracks"], hi["declared_tracks"]),
+        ("playlists", summary["playlists"], hi["declared_playlists"]),
+    ):
+        if declared is None:
+            print(f"  {label:9}: {got:,} (no declared count in header)")
+        elif declared == got:
+            print(f"  {label:9}: {got:,}  ==  {declared:,} declared   OK")
+        else:
+            print(f"  {label:9}: {got:,}  !=  {declared:,} declared   WARNING: mismatch")
+    print("\nAlso compare the track count against the Songs view in the Apple Music app")
+    print("(the Songs view may be slightly lower — it excludes music videos).")
 
 
 if __name__ == "__main__":
