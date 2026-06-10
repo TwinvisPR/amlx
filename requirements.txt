@@ -1,0 +1,2 @@
+# No third-party dependencies — the exporter uses only the Python standard library.
+# Requires Python 3.7+.

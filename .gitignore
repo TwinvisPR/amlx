@@ -1,0 +1,27 @@
+# NEVER commit anyone's personal library data — this repo is code only.
+output/
+exports/
+*.csv
+
+# Library databases / bundles and cached artwork
+*.musicdb
+*.musiclibrary
+*.musiclibrary/
+artwork/
+*.itc
+*.itc2
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
