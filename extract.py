@@ -82,18 +82,53 @@ def header_info(raw):
     return info
 
 
+KEY_ENV = "MUSICDB_AES_KEY"
+KEY_HELP = (
+    "A 16-character AES key is required and supplied at runtime (it is not\n"
+    "stored in this tool). Provide it in any one of these ways:\n"
+    f"  - set the {KEY_ENV} environment variable, or\n"
+    "  - put it in a file named 'key.txt' next to extract.py, or\n"
+    "  - in a '.env' file next to extract.py as  " + KEY_ENV + "=...\n"
+    "  - pass --key on the command line"
+)
+
+
+def load_key(cli_key):
+    """Obtain the 16-byte AES key from --key, the environment, or a local
+    key.txt/.env file. The key is never stored in this repository."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    raw = cli_key or os.environ.get(KEY_ENV)
+    if not raw:
+        kt = os.path.join(here, "key.txt")
+        env = os.path.join(here, ".env")
+        if os.path.isfile(kt):
+            raw = open(kt, encoding="utf-8").read()
+        elif os.path.isfile(env):
+            for line in open(env, encoding="utf-8"):
+                if line.strip().startswith(KEY_ENV + "="):
+                    raw = line.split("=", 1)[1]
+                    break
+    if not raw:
+        raise SystemExit("ERROR: no AES key provided.\n\n" + KEY_HELP)
+    key = raw.strip().strip('"').strip("'").encode("ascii", "ignore")
+    if len(key) != 16:
+        raise SystemExit(f"ERROR: the AES key must be exactly 16 characters (got {len(key)}).\n\n" + KEY_HELP)
+    return key
+
+
 def main():
     ap = argparse.ArgumentParser(description="Export Apple Music (Windows) library metadata to CSV.")
     ap.add_argument("--library", help="Path to the .musiclibrary bundle or a Library.musicdb file")
     ap.add_argument("--out", default="output", help="Output directory (default: output)")
-    ap.add_argument("--key", default=None, help="Override the AES-128 key (16 chars)")
+    ap.add_argument("--key", default=None,
+                    help="The 16-char AES key (supplied at runtime; see README). "
+                         "Or set %s, or a key.txt/.env file." % KEY_ENV)
     ap.add_argument("--no-artwork", action="store_true", help="Skip cover-art extraction")
     ap.add_argument("--cdn-fallback", action="store_true",
                     help="Fetch covers missing from the local cache via Apple's public catalog")
     args = ap.parse_args()
 
-    if args.key:
-        musicdb.MUSICDB_AES_KEY = args.key.encode("ascii")
+    key = load_key(args.key)
 
     lib_dir, db_path = resolve_library(args.library)
     print(f"Library : {db_path}")
@@ -108,7 +143,7 @@ def main():
         print(f"Version : {hi['version']}  (envelope {hi['envelope']} bytes, {len(raw):,} bytes)")
 
         print("Decrypting + parsing...")
-        library = musicdb.parse(musicdb.decrypt_and_inflate(raw))
+        library = musicdb.parse(musicdb.decrypt_and_inflate(raw, key))
 
         artwork_map, art_stats = {}, {"cache": 0, "cdn": 0, "missing": 0, "unique_images": 0}
         if not args.no_artwork:

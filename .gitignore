@@ -3,6 +3,10 @@ output/
 exports/
 *.csv
 
+# The AES key is supplied by the user and must never be committed.
+key.txt
+.env
+
 # Library databases / bundles and cached artwork
 *.musicdb
 *.musiclibrary
@@ -25,3 +29,4 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+excalidraw.log

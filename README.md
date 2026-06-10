@@ -22,6 +22,19 @@ touched, and no DRM is involved.** You're saving the *names* of music you alread
 | `albums.csv` | Unique albums derived from your tracks: album, album_artist, year, track count, compilation flag, cover art |
 | `artwork/` | Cover images (600×600 where available), **de-duplicated by SHA-256** so shared covers are stored once |
 
+## Providing the key (required, one-time)
+
+The database is encrypted with a 16-character AES key, which you supply at runtime — it is not
+stored in this repository. Give it to the tool any one of these ways:
+
+- create a file **`key.txt`** next to `extract.py` containing just the key, **or**
+- set the **`MUSICDB_AES_KEY`** environment variable, **or**
+- a **`.env`** file next to `extract.py` with `MUSICDB_AES_KEY=...` (copy `.env.example`), **or**
+- pass `--key <thekey>` on the command line.
+
+`key.txt` and `.env` are git-ignored, so your key never ends up committed. The same key works for
+every Apple Music library — it is not tied to your account.
+
 ## Usage
 
 ### No Python? Just double-click `run.bat` (Windows)
@@ -78,8 +91,7 @@ Two checks confirm completeness:
 
 `Library.musicdb` is Apple's proprietary `hfma` format: a small clear-text header, then an
 AES-128-ECB-encrypted, zlib-compressed payload of `hsma`/`itma`/`boma`/`lpma` sections. The tool
-decrypts it (using the key you supply),
-inflates it, and walks the section tree. See [`docs/FORMAT.md`](docs/FORMAT.md) for the full byte
+decrypts it (using the key you supply), inflates it, and walks the section tree. See [`docs/FORMAT.md`](docs/FORMAT.md) for the full byte
 layout. The AES implementation is pure-Python and checked against the FIPS-197 test vector
 (`python tests/test_aes.py`).
 
@@ -89,8 +101,6 @@ Format reverse-engineering builds on **Gary Vollink's** musicdb notes
 (<https://home.vollink.com/gary/playlister/musicdb.html>) and the
 **pitetb/AppMusicLibParser** project. This repo reimplements the read path in dependency-free
 Python and adds artwork export and the standardized CSV schema.
-
-
 
 ## License
 

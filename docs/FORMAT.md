@@ -19,7 +19,9 @@ These notes match what `amlx/musicdb.py` implements.
 16-byte multiple) are **AES-128-ECB** encrypted; the remainder is clear. Concatenate
 `decrypt(payload[:crypt]) + payload[crypt:]` and **zlib-inflate** to get the section tree.
 
-- **AES key** (16 ASCII bytes): `SUPPLY-KEY-AT-RUNTIME` — supplied at runtime.
+- **AES key** (16 ASCII bytes): a static key, supplied at runtime (see the README
+  "Providing the key" section). It is not stored in this repository, and is the same
+  constant for every installation.
 - **Dates**: u32 seconds since **1904-01-01 00:00:00 UTC**.
 
 ## 2. Section tree

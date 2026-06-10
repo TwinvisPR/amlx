@@ -7,6 +7,6 @@ decrypts and parses it, and writes your full library metadata + cover art to CSV
 
 __version__ = "1.0.0"
 
-from .musicdb import decrypt_and_inflate, parse, MUSICDB_AES_KEY
+from .musicdb import decrypt_and_inflate, parse
 
-__all__ = ["decrypt_and_inflate", "parse", "MUSICDB_AES_KEY", "__version__"]
+__all__ = ["decrypt_and_inflate", "parse", "__version__"]

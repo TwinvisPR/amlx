@@ -19,12 +19,10 @@ def test_fips197_vector():
 
 
 def test_multiblock_roundlength():
-    key = b"SUPPLY-KEY-AT-RUNTIME"
     # two identical ECB blocks decrypt independently and deterministically
     ct = bytes.fromhex("69c4e0d86a7b0430d8cdb78070b4c55a") * 2
     out = decrypt_ecb(ct, bytes.fromhex("000102030405060708090a0b0c0d0e0f"))
     assert len(out) == 32 and out[:16] == out[16:]
-    assert len(key) == 16
 
 
 if __name__ == "__main__":

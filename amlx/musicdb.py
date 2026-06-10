@@ -7,7 +7,9 @@ the whole thing, then walk the inner ``hsma/itma/boma/lpma`` section tree.
 
 All field offsets below were reverse-engineered and verified against a real
 Windows Apple Music library (app v1.1540.23042.0, db version 1.6.4.90), and
-cross-checked against the documentation referenced in docs/FORMAT.md. The decryption key is supplied by the caller at runtime; this code reads metadata only.
+cross-checked against the documentation referenced in docs/FORMAT.md. The
+decryption key is supplied by the caller at runtime; this code reads metadata
+only.
 """
 
 import struct
@@ -17,8 +19,9 @@ from urllib.parse import unquote
 
 from .aes import decrypt_ecb
 
-# The 16-byte AES key for the hfma payload (supplied at runtime).
-MUSICDB_AES_KEY = b"SUPPLY-KEY-AT-RUNTIME"
+# NOTE: the 16-byte AES key for the hfma payload is supplied at runtime (see
+# README "Providing the key"); it is not stored in this repository. The parser
+# takes the key as an argument and never persists it.
 
 # Apple timestamps are seconds since 1904-01-01 00:00:00 UTC.
 _APPLE_EPOCH = datetime.datetime(1904, 1, 1, tzinfo=datetime.timezone.utc)
@@ -60,16 +63,20 @@ class _Buf:
             return None
 
 
-def decrypt_and_inflate(raw):
-    """Take the raw .musicdb file bytes, return the decompressed payload."""
+def decrypt_and_inflate(raw, key):
+    """Take the raw .musicdb file bytes and the 16-byte AES key, return the
+    decompressed payload. The key must be supplied by the caller — it is not
+    embedded in this project (see README)."""
     if raw[:4] != b"hfma":
         raise ValueError("not an hfma file (bad signature)")
+    if not isinstance(key, (bytes, bytearray)) or len(key) != 16:
+        raise ValueError("a 16-byte AES key must be provided")
     envelope = struct.unpack_from("<I", raw, 4)[0]
     max_crypt = struct.unpack_from("<I", raw, 84)[0]
     payload = raw[envelope:]
     crypt = max_crypt if 0 < max_crypt < len(payload) else (len(payload) // 16) * 16
     crypt -= crypt % 16
-    decrypted = decrypt_ecb(payload[:crypt], MUSICDB_AES_KEY)
+    decrypted = decrypt_ecb(payload[:crypt], bytes(key))
     return zlib.decompressobj().decompress(decrypted + payload[crypt:])
 
 
