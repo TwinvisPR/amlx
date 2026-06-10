@@ -24,6 +24,15 @@ touched, and no DRM is involved.** You're saving the *names* of music you alread
 
 ## Usage
 
+### No Python? Just double-click `run.bat` (Windows)
+
+If you don't have Python installed, run **`run.bat`**. It uses Python if you have it, otherwise it
+downloads a small **portable** Python (~11 MB, no install, no admin rights) into a local `.python`
+folder and runs the export. Pass options after it, e.g. `run.bat --cdn-fallback`. Delete the
+`.python` folder afterward to remove every trace.
+
+### With Python (any OS)
+
 Requires **Python 3.7+** — and nothing else. No `pip install`, no .NET, no OpenSSL.
 
 ```bash
