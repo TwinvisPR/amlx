@@ -102,12 +102,10 @@ def parse(payload):
     b = _Buf(payload)
     n = len(payload)
 
-    header = {}
-    if payload[:4] == b"hfma" or True:
-        # The decompressed stream opens with 'hsma' sections; the library-level
-        # header values we care about (version string) live in the file header,
-        # which the caller passes separately. Nothing to read here.
-        pass
+    # The decompressed stream is a flat list of 'hsma'/'itma'/'boma'/'lpma'
+    # sections. We walk it defensively: a truncated or corrupt section is
+    # skipped rather than aborting the whole export (a real library may be
+    # mid-sync). Reads are bounds-checked via the section size field.
 
     tracks = {}          # persistent_id -> dict
     track_order = []
@@ -119,23 +117,31 @@ def parse(payload):
     pl = None            # current playlist dict
 
     pos = 0
-    while pos < n - 8:
+    while pos <= n - 8:
         sig = payload[pos:pos + 4]
         if sig == b"\x00\x00\x00\x00":
             break
 
-        if sig == b"boma":
-            size = b.u32(pos + 8)
-            sub = b.u32(pos + 12)
-            nxt = pos + size
-            if cur == "track" and t is not None:
-                _boma_track(b, pos, nxt, sub, t)
-            elif cur == "playlist" and pl is not None:
-                _boma_playlist(b, pos, sub, pl)
-        else:
-            size = b.u32(pos + 4)
-            nxt = pos + size
-            if sig in (b"lama", b"lAma", b"lPma", b"ltma"):
+        is_boma = sig == b"boma"
+        size_off = pos + 8 if is_boma else pos + 4
+        if size_off + 4 > n:
+            break
+        size = b.u32(size_off)
+        nxt = pos + size
+        # A valid section is at least its own header and stays within the
+        # buffer; anything else means we've hit garbage — stop cleanly.
+        min_size = 16 if is_boma else 8
+        if size < min_size or nxt <= pos or nxt > n:
+            break
+
+        try:
+            if is_boma:
+                sub = b.u32(pos + 12)
+                if cur == "track" and t is not None:
+                    _boma_track(b, pos, nxt, sub, t)
+                elif cur == "playlist" and pl is not None:
+                    _boma_playlist(b, pos, sub, pl)
+            elif sig in (b"lama", b"lAma", b"lPma", b"ltma"):
                 cur, t, pl = None, None, None
             elif sig == b"iama":
                 cur, t, pl = "album", None, None
@@ -156,9 +162,10 @@ def parse(payload):
                 _parse_track_fixed(b, pos, size, t)
             elif sig == b"hfma":
                 library_id = b.u64(pos + 28) if size >= 36 else 0
+        except (struct.error, IndexError, UnicodeDecodeError, ValueError):
+            # Malformed section body — keep what we have and move on.
+            pass
 
-        if nxt <= pos:
-            break
         pos = nxt
 
     return {
