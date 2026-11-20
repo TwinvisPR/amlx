@@ -163,6 +163,8 @@ def main():
           f"({summary['local']:,} local, {summary['cloud']:,} cloud)")
     print(f"  playlists.csv       : {summary['playlists']}")
     print(f"  playlist_tracks.csv : {summary['playlist_entries']:,} ordered entries")
+    if summary.get("playlist_files"):
+        print(f"  playlists/          : {summary['playlist_files']} individual playlist CSVs")
     print(f"  albums.csv          : {summary['albums']:,} unique albums")
     if not args.no_artwork:
         covered = art_stats["cache"] + art_stats["cdn"]

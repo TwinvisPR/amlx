@@ -1,0 +1,12 @@
+{
+  "include": [
+    "amlx",
+    "tests",
+    "extract.py"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ]
+}

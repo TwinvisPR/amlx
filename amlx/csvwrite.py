@@ -2,11 +2,24 @@
 
 import csv
 import os
+import re
 from collections import defaultdict, Counter
 
 
 def _dt(d):
     return d.strftime("%Y-%m-%d %H:%M:%S") if d else ""
+
+
+def _safe_filename(name, default="playlist"):
+    if not name:
+        return default
+    cleaned = re.sub(r'[\\/*?:"<>|]', "_", name).strip().rstrip(". ")
+    reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+                "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
+                "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"}
+    if cleaned.upper() in reserved or not cleaned:
+        cleaned = f"_{cleaned}" if cleaned else default
+    return cleaned
 
 
 def write_all(library, artwork_map, out_dir):
@@ -44,23 +57,61 @@ def write_all(library, artwork_map, out_dir):
                 t["persistent_id"], af, ah,
             ])
 
-    # ---- playlists.csv + playlist_tracks.csv ----
+    # ---- playlists.csv + playlist_tracks.csv + playlists/ folder ----
+    track_by_id = {t["persistent_id"]: t for t in tracks}
     name_by_id = {}
     for p in playlists:
         pid = p["persistent_id"]
         if pid != "0000000000000000" and p["name"] and pid not in name_by_id:
             name_by_id[pid] = p["name"]
+
+    playlists_dir = os.path.join(out_dir, "playlists")
+    os.makedirs(playlists_dir, exist_ok=True)
+    used_filenames = set()
+    playlist_files_count = 0
+
     with open(os.path.join(out_dir, "playlists.csv"), "w", newline="", encoding="utf-8") as f, \
          open(os.path.join(out_dir, "playlist_tracks.csv"), "w", newline="", encoding="utf-8") as g:
         pw = csv.writer(f)
         tw = csv.writer(g)
         pw.writerow(["playlist_index", "name", "type", "parent_folder", "track_count", "persistent_id"])
-        tw.writerow(["playlist_index", "playlist_name", "position", "track_persistent_id"])
+        tw.writerow(["playlist_index", "playlist_name", "position", "track_persistent_id",
+                     "title", "artist", "album", "genre", "year", "duration_sec"])
         for i, p in enumerate(playlists):
+            pname = p["name"] or ""
             parent = name_by_id.get(p["parent_id"], "") if p["parent_id"] else ""
-            pw.writerow([i, p["name"] or "", p["type"], parent, p["track_count"], p["persistent_id"]])
-            for pos, tid in enumerate(p["track_ids"], 1):
-                tw.writerow([i, p["name"] or "", pos, tid])
+            pw.writerow([i, pname, p["type"], parent, p["track_count"], p["persistent_id"]])
+
+            pl_csv_writer = None
+            pl_file = None
+            if p["track_ids"]:
+                base_name = _safe_filename(pname, default=f"playlist_{i}")
+                fname = base_name
+                counter = 1
+                while fname.lower() in used_filenames:
+                    fname = f"{base_name}_{counter}"
+                    counter += 1
+                used_filenames.add(fname.lower())
+                pl_file = open(os.path.join(playlists_dir, f"{fname}.csv"), "w", newline="", encoding="utf-8")
+                pl_csv_writer = csv.writer(pl_file)
+                pl_csv_writer.writerow(["position", "title", "artist", "album", "genre", "year", "duration_sec", "track_persistent_id"])
+                playlist_files_count += 1
+
+            try:
+                for pos, tid in enumerate(p["track_ids"], 1):
+                    tr = track_by_id.get(tid)
+                    title = tr["title"] if tr and tr["title"] else ""
+                    artist = tr["artist"] if tr and tr["artist"] else ""
+                    album = tr["album"] if tr and tr["album"] else ""
+                    genre = tr["genre"] if tr and tr["genre"] else ""
+                    year = tr["year"] if tr and tr["year"] else ""
+                    dur = (tr["duration_ms"] // 1000) if tr and tr["duration_ms"] else ""
+                    tw.writerow([i, pname, pos, tid, title, artist, album, genre, year, dur])
+                    if pl_csv_writer:
+                        pl_csv_writer.writerow([pos, title, artist, album, genre, year, dur, tid])
+            finally:
+                if pl_file:
+                    pl_file.close()
 
     # ---- albums.csv (derived) ----
     agg = {}
@@ -91,6 +142,7 @@ def write_all(library, artwork_map, out_dir):
         "tracks": len(tracks), "local": local, "cloud": len(tracks) - local,
         "playlists": len(playlists),
         "playlist_entries": sum(len(p["track_ids"]) for p in playlists),
+        "playlist_files": playlist_files_count,
         "albums": len(agg), "albums_with_art": albums_with_art,
         "compilations": sum(1 for t in tracks if t["compilation"]),
         "loved": sum(1 for t in tracks if t["like"] == 2),

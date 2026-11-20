@@ -86,8 +86,9 @@ Type: `folder` if track_count==0 and distinguished_kind==0; `system` if distingu
 `smart` if a `0x00C9` (smart criteria) boma is present; else `normal`. Name comes from a
 `0x00C8` boma.
 
-**Ordered tracks**: each `0x00CE` boma contains an `ipfa` record; the track persistent ID is the
-u64 at offset **40** of the atom. Their order in the stream is the playlist order.
+**Ordered tracks**: each `0x00CE` (`ipfa`) or `0x00DA` (`IPfa`, seen in v1.7.0+) boma contains a
+track ref record. For `ipfa`, the track persistent ID is at offset **40** of the atom; for `IPfa`,
+it is at offset **36**. Their order in the stream is the playlist order.
 
 ## 6. Artwork (`artwork.sqlite` + `artwork/`)
 

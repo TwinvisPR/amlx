@@ -18,7 +18,8 @@ touched, and no DRM is involved.** You're saving the *names* of music you alread
 |------|--------------|
 | `tracks.csv` | Every track: title, artist, album, album_artist, genre, year, track #, duration, date added, last played, play count, star rating, favorite (love), compilation flag, cloud/local, file path, persistent ID, **cover art file + hash** |
 | `playlists.csv` | Every playlist: name, type (normal / smart / folder / system), parent folder, track count, persistent ID |
-| `playlist_tracks.csv` | The **ordered** contents of every playlist (playlist → position → track persistent ID) |
+| `playlist_tracks.csv` | The **ordered** contents of every playlist with track title, artist, album, duration, and persistent ID |
+| `playlists/` | Individual CSV files for each playlist containing its ordered song list |
 | `albums.csv` | Unique albums derived from your tracks: album, album_artist, year, track count, compilation flag, cover art |
 | `artwork/` | Cover images (600×600 where available), **de-duplicated by SHA-256** so shared covers are stored once |
 
