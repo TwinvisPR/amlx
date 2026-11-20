@@ -277,8 +277,13 @@ def _boma_playlist(b, pos, sub, pl):
         pl["_smart"] = True
         if pl["type"] == "normal":
             pl["type"] = "smart"
-    elif sub == 0xCE:                                   # ipfa: one ordered track ref
-        if b.d[pos + 20:pos + 24] == b"ipfa":
+    elif sub in (0xCE, 0xDA):                           # ipfa / IPfa: one ordered track ref
+        marker = b.d[pos + 20:pos + 24]
+        if marker == b"ipfa":
             tid = b.u64(pos + 40)
+            if tid:
+                pl["track_ids"].append("%016X" % tid)
+        elif marker == b"IPfa":
+            tid = b.u64(pos + 36)
             if tid:
                 pl["track_ids"].append("%016X" % tid)
